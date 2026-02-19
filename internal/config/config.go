@@ -1,38 +1,35 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
-	"os"
 	"errors"
+	"os"
+
+	"github.com/joho/godotenv"
 )
 
-func NewConfig(token, url, serverPort string) *Config {
-	return &Config{
-		Token:      token,
-		URL:        url,
-		ServerPort: serverPort,
-	}
-}
-
-func (c *Config) Validate() error {
+func NewConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
-		return err
+		return nil, err
 	}
-	
-	token := os.Getenv("BOT_TOKEN")
-	if token == "" {
-		return errors.New("BOT_TOKEN environment variable is not set")
+
+	botToken := os.Getenv("BOT_TOKEN")
+	if botToken == "" {
+		return nil, errors.New("BOT_TOKEN environment variable is not set")
 	}
-	
-	url := os.Getenv("URL")
-	if url == "" {
-		return errors.New("URL environment variable is not set")
-	}
-	
+
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == "" {
-		return errors.New("SERVER_PORT environment variable is not set")
+		return nil, errors.New("SERVER_PORT environment variable is not set")
 	}
-	
-	return nil
+
+	publicURL := os.Getenv("PUBLIC_URL")
+	if publicURL == "" {
+		return nil, errors.New("PUBLIC_URL environment variable is not set")
+	}
+
+	return &Config{
+		BotToken:   botToken,
+		ServerPort: serverPort,
+		PublicURL:  publicURL,
+	}, nil
 }

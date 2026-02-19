@@ -2,62 +2,34 @@ package main
 
 import (
 	"context"
+	tgbot "fcstask-monitor-bot/internal/bot"
+	config "fcstask-monitor-bot/internal/config"
+	database "fcstask-monitor-bot/internal/db"
+	server "fcstask-monitor-bot/internal/server"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	
-	gotgbot "github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
-	"github.com/joho/godotenv"
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	opts := []gotgbot.Option{
-		gotgbot.WithDefaultHandler(handler),
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("failed to create config: %v", err)
 	}
-
-	godotenv.Load()
-
-	token := os.Getenv("BOT_TOKEN")
-	bot, err := gotgbot.New(token, opts...)
+	
+	database.InitDB()
+	
+	bot, err := tgbot.NewBot(ctx, cfg)
 	if err != nil {
 		log.Fatalf("failed to create bot: %v", err)
 	}
-
-	url := os.Getenv("URL")
-	if _, err := bot.SetWebhook(ctx, &gotgbot.SetWebhookParams{
-		URL: url + "/webhook",
-	}); err != nil {
-		log.Fatalf("failed to set webhook: %v", err)
+	bot.Start(ctx)
+	
+	serverFiber := server.NewServer(ctx, bot)
+	if err := serverFiber.Run(ctx, cfg); err != nil {
+		log.Fatalf("failed to start server: %v", err)
 	}
-
-	go bot.StartWebhook(ctx)
-
-	server := fiber.New()
-	server.Get("/webhook", func(c *fiber.Ctx) error {
-		return c.Status(http.StatusOK).JSON(fiber.Map{"message": "webhook"})
-	})
-	server.Post("/webhook", adaptor.HTTPHandler(bot.WebhookHandler()))
-
-	go func() {
-		if err := server.Listen(":" + os.Getenv("SERVER_PORT")); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	<-ctx.Done()
-	server.Shutdown()
-}
-
-func handler(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
-	bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-		ChatID: update.Message.Chat.ID,
-		Text:   update.Message.Text,
-	})
 }

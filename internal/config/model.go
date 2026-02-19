@@ -1,7 +1,9 @@
 package config
 
 type Config struct {
-	Token      string `yaml:"BOT_TOKEN"`
-	URL        string `yaml:"URL"`
-	ServerPort string `yaml:"SERVER_PORT"`
+	BotToken   string `env:"BOT_TOKEN,required"`
+	ServerPort string `env:"SERVER_PORT,required"`
+	PublicURL  string `env:"PUBLIC_URL,required"`
 }
+
+
