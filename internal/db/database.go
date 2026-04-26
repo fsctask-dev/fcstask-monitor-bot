@@ -1,7 +1,7 @@
 package database
 
 import (
-	model "fcstask-monitor-bot/internal/models"
+	model "fcstask-monitor-bot/internal/model"
 	"fmt"
 	"log"
 	"os"
@@ -31,4 +31,12 @@ func InitDB() {
 	}
 
 	log.Println("Database initialized successfully")
+}
+
+func GetAllUsers() ([]model.User, error) {
+	var users []model.User
+	if err := DB.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }

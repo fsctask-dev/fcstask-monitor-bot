@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"fcstask-monitor-bot/internal/bot/handlers"
 	config "fcstask-monitor-bot/internal/config"
 	"net/http"
 
@@ -11,8 +10,11 @@ import (
 
 func NewBot(ctx context.Context, cfg *config.Config) (*Bot, error) {
 	opts := []gotgbot.Option{
-		gotgbot.WithDefaultHandler(handlers.Default),
-		gotgbot.WithMessageTextHandler("/start", gotgbot.MatchTypeExact, handlers.Start),
+		gotgbot.WithDefaultHandler(Default),
+		gotgbot.WithMessageTextHandler("/start", gotgbot.MatchTypeExact, Start),
+		gotgbot.WithMessageTextHandler("/stop", gotgbot.MatchTypeExact, Stop),
+		gotgbot.WithMessageTextHandler("/status", gotgbot.MatchTypeExact, Status),
+		gotgbot.WithMessageTextHandler("/help", gotgbot.MatchTypeExact, Help),
 	}
 
 	bot, err := gotgbot.New(cfg.BotToken, opts...)

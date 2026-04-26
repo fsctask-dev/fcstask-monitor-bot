@@ -1,15 +1,20 @@
 package server
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 type Server struct {
 	app *fiber.App
 }
 
-type AlertPayload struct {
-	Status string `json:"status"`
-	Alerts []struct {
-		Annotations map[string]string `json:"annotations"`
-		Labels      map[string]string `json:"labels"`
-	} `json:"alerts"`
+type Alert struct {
+	AlertName string    `json:"alertname"`
+	Severity  string    `json:"severity"`
+	Instance  string    `json:"instance"`
+	Summary   string    `json:"summary"`
+	Status    string    `json:"status"`
+	StartsAt  time.Time `json:"startsAt"`
 }

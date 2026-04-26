@@ -9,27 +9,29 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Fatalf("failed to create config: %v", err)
+		log.Fatalf("[%s][ERROR]: %v", time.Now(), err)
 	}
-	
+
 	database.InitDB()
-	
+
 	bot, err := tgbot.NewBot(ctx, cfg)
 	if err != nil {
-		log.Fatalf("failed to create bot: %v", err)
+		log.Fatalf("[%s][ERROR]: %v", time.Now(), err)
 	}
 	bot.Start(ctx)
-	
+
 	serverFiber := server.NewServer(ctx, bot)
 	if err := serverFiber.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to start server: %v", err)
+		log.Fatalf("[%s][ERROR]: %v", time.Now(), err)
 	}
 }

@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fcstask-postgres
+    environment:
+      POSTGRES_USER: fcstask
+      POSTGRES_PASSWORD: fcstask_password
+      POSTGRES_DB: fcstask
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fcstask"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  monitor-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fcstask-monitor-bot
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      SERVER_PORT: "8000"
+      PUBLIC_URL: ${PUBLIC_URL}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: fcstask
+      DB_PASSWORD: fcstask_password
+      DB_NAME: fcstask
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  alert-sender:
+    image: alpine:latest
+    container_name: fcstask-alert-sender
+    command: ["/bin/sh", "-c", "apk add --no-cache go && cd /app && go run main.go"]
+    working_dir: /app
+    environment:
+      MONITOR_BOT_URL: http://monitor-bot:8000/alert
+      INTERVAL_SECONDS: 30
+    ports:
+      - "8001:8001"
+    depends_on:
+      - monitor-bot
+
+volumes:
+  postgres_data:

@@ -5,5 +5,3 @@ type Config struct {
 	ServerPort string `env:"SERVER_PORT,required"`
 	PublicURL  string `env:"PUBLIC_URL,required"`
 }
-
-
