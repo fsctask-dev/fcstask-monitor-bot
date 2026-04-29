@@ -14,7 +14,6 @@ FROM alpine:3.23
 WORKDIR /app
 
 COPY --from=builder /app/bot .
-COPY .env.docker .env
 
 RUN apk --no-cache add ca-certificates
 

@@ -1,10 +1,11 @@
 package database
 
 import (
-	model "fcstask-monitor-bot/internal/model"
 	"fmt"
-	"log"
 	"os"
+
+	"fcstask-monitor-bot/internal/logger"
+	model "fcstask-monitor-bot/internal/model"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -22,15 +23,15 @@ func InitDB() {
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
 	}
 
 	err = DB.AutoMigrate(&model.User{})
 	if err != nil {
-		log.Fatalf("failed to migrate RegisteredUser model: %v", err)
+		logger.Log.Fatal().Err(err).Msg("failed to migrate user model")
 	}
 
-	log.Println("Database initialized successfully")
+	logger.Log.Info().Msg("database initialized successfully")
 }
 
 func GetAllUsers() ([]model.User, error) {

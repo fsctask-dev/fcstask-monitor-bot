@@ -2,10 +2,10 @@ package bot
 
 import (
 	"context"
-	"log"
 	"time"
 
-	database "fcstask-monitor-bot/internal/db"
+	"fcstask-monitor-bot/internal/db"
+	"fcstask-monitor-bot/internal/logger"
 	model "fcstask-monitor-bot/internal/model"
 
 	gotgbot "github.com/go-telegram/bot"
@@ -13,18 +13,17 @@ import (
 	"gorm.io/gorm"
 )
 
-func Default(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
-	if update.Message == nil {
-		return
-	}
-}
-
 func Start(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	if update.Message == nil {
+		logger.Log.Debug().Int64("update_id", update.ID).Msg("update message is nil")
 		return
 	}
 
 	chatID := update.Message.Chat.ID
+	text := update.Message.Text
+
+	logger.Log.Info().Int64("chat_id", chatID).Str("text", text).Msg("start command received")
+
 	user := model.User{
 		ChatID:    chatID,
 		CreatedAt: time.Now(),
@@ -33,17 +32,21 @@ func Start(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	res := database.DB.Where("chat_id = ?", chatID).FirstOrCreate(&user)
 	switch {
 	case res.Error != nil:
-		log.Printf("[%s][ERROR]: %v, chat_id: %d", time.Now(), res.Error, chatID)
+		logger.Log.Error().Err(res.Error).Int64("chat_id", chatID).Msg("failed to create user")
 	case res.RowsAffected == 0:
-		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:  "⏹️ Вы уже подписаны на алёрты",
+			Text:   "⏹️ Вы уже подписаны на алёрты",
 		})
+		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent already subscribed message")
 	default:
-		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID: chatID,
-			Text:  "✅Вы подписались на алёрты",
+		logger.Log.Info().Int64("chat_id", chatID).Msg("new subscription created")
+		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+			ChatID:      chatID,
+			Text:        "✅Вы подписались на алёрты",
+			ReplyMarkup: BuildReplyKeyboard(),
 		})
+		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent subscription confirmation")
 	}
 }
 
@@ -53,21 +56,25 @@ func Stop(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	}
 
 	chatID := update.Message.Chat.ID
+	logger.Log.Info().Int64("chat_id", chatID).Msg("stop command received")
 
 	res := database.DB.Delete(&model.User{}, "chat_id = ?", chatID)
 	switch {
 	case res.Error != nil:
-		log.Printf("[%s][ERROR]: %v, chat_id: %d", time.Now(), res.Error, chatID)
+		logger.Log.Error().Err(res.Error).Int64("chat_id", chatID).Msg("failed to delete user")
 	case res.RowsAffected == 0:
-		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:  "⏹️ Вы не были подписаны на алёрты",
+			Text:   "⏹️ Вы не были подписаны на алёрты",
 		})
+		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent not subscribed message")
 	default:
-		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID: chatID,
-			Text:  "❌ Вы отписались от алёртов",
+		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+			ChatID:      chatID,
+			Text:        "❌ Вы отписались от алёртов",
+			ReplyMarkup: BuildReplyKeyboard(),
 		})
+		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent unsubscription confirmation")
 	}
 }
 
@@ -77,21 +84,26 @@ func Status(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	}
 
 	chatID := update.Message.Chat.ID
+	logger.Log.Info().Int64("chat_id", chatID).Msg("status command received")
 
 	res := database.DB.First(&model.User{}, "chat_id = ?", chatID)
 	switch {
 	case res.Error == gorm.ErrRecordNotFound:
-		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID: chatID,
-			Text:  "❌ Вы не подписаны на алёрты",
+		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+			ChatID:      chatID,
+			Text:        "❌ Вы не подписаны на алёрты",
+			ReplyMarkup: BuildReplyKeyboard(),
 		})
+		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent not subscribed status")
 	case res.Error != nil:
-		log.Printf("[%s][ERROR]: %v, chat_id: %d", time.Now(), res.Error, chatID)
+		logger.Log.Error().Err(res.Error).Int64("chat_id", chatID).Msg("failed to get user status")
 	default:
-		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID: chatID,
-			Text:  "✅ Вы подписаны на алёрты",
+		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+			ChatID:      chatID,
+			Text:        "✅ Вы подписаны на алёрты",
+			ReplyMarkup: BuildReplyKeyboard(),
 		})
+		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent subscribed status")
 	}
 }
 
@@ -100,8 +112,13 @@ func Help(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 		return
 	}
 
-	bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-		ChatID: update.Message.Chat.ID,
-		Text:  "/start  — ✅ Подписаться на алёрты\n/stop   — ❌ Отписаться от алёртов\n/status — ❔ Проверить статус\n/help   — 📋 Список команд",
+	chatID := update.Message.Chat.ID
+	logger.Log.Info().Int64("chat_id", chatID).Msg("help command received")
+
+	_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+		ChatID:      chatID,
+		Text:      "/start  — ✅ Подписаться на алёрты\n/stop   — ❌ Отписаться от алёртов\n/status — ❔ Проверить статус\n/help   — 📋 Список команд",
+		ReplyMarkup: BuildReplyKeyboard(),
 	})
+	logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent help message")
 }

@@ -3,8 +3,7 @@ package server
 import (
 	"fcstask-monitor-bot/internal/bot"
 	db "fcstask-monitor-bot/internal/db"
-	"log"
-	"time"
+	"fcstask-monitor-bot/internal/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
@@ -24,7 +23,7 @@ func HandleAlert(bot *bot.Bot) fiber.Handler {
 
 		users, err := db.GetAllUsers()
 		if err != nil {
-			log.Printf("[%s][ERROR]: %v", time.Now(), err)
+			logger.Log.Error().Err(err).Msg("failed to get users from database")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 
