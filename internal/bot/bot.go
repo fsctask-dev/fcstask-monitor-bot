@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	gotgbot "github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 func NewBot(ctx context.Context, cfg *config.Config) (*Bot, error) {
@@ -19,6 +20,17 @@ func NewBot(ctx context.Context, cfg *config.Config) (*Bot, error) {
 
 	bot, err := gotgbot.New(cfg.BotToken, opts...)
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := bot.SetMyCommands(ctx, &gotgbot.SetMyCommandsParams{
+		Commands: []models.BotCommand{
+			{Command: "start", Description: "✅ Подписаться"},
+			{Command: "stop", Description: "❌ Отписаться"},
+			{Command: "status", Description: "❔ Статус"},
+			{Command: "help", Description: "📋 Помощь"},
+		},
+	}); err != nil {
 		return nil, err
 	}
 

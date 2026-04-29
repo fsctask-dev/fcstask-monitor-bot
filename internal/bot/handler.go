@@ -37,12 +37,12 @@ func Start(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	case res.RowsAffected == 0:
 		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:   "⏹️ Вы уже подписаны на алёрты",
+			Text:  "⏹️ Вы уже подписаны на алёрты",
 		})
 	default:
 		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:   "✅Вы подписались на алёрты",
+			Text:  "✅Вы подписались на алёрты",
 		})
 	}
 }
@@ -61,12 +61,12 @@ func Stop(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	case res.RowsAffected == 0:
 		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:   "⏹️ Вы не были подписаны на алёрты",
+			Text:  "⏹️ Вы не были подписаны на алёрты",
 		})
 	default:
 		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:   "❌ Вы отписались от алёртов",
+			Text:  "❌ Вы отписались от алёртов",
 		})
 	}
 }
@@ -83,14 +83,14 @@ func Status(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	case res.Error == gorm.ErrRecordNotFound:
 		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:   "❌ Вы не подписаны на алёрты",
+			Text:  "❌ Вы не подписаны на алёрты",
 		})
 	case res.Error != nil:
 		log.Printf("[%s][ERROR]: %v, chat_id: %d", time.Now(), res.Error, chatID)
 	default:
 		bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 			ChatID: chatID,
-			Text:   "✅ Вы подписаны на алёрты",
+			Text:  "✅ Вы подписаны на алёрты",
 		})
 	}
 }
@@ -102,9 +102,6 @@ func Help(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 
 	bot.SendMessage(ctx, &gotgbot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
-		Text: "/start  — ✅ Подписаться на алёрты\n" +
-			"/stop   — ❌ Отписаться от алёртов\n" +
-			"/status — ❔ Проверить статус\n" +
-			"/help   — 📋 Список команд",
+		Text:  "/start  — ✅ Подписаться на алёрты\n/stop   — ❌ Отписаться от алёртов\n/status — ❔ Проверить статус\n/help   — 📋 Список команд",
 	})
 }
