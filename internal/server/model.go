@@ -10,11 +10,16 @@ type Server struct {
 	app *fiber.App
 }
 
-type Alert struct {
-	AlertName string    `json:"alertname"`
-	Severity  string    `json:"severity"`
-	Instance  string    `json:"instance"`
-	Summary   string    `json:"summary"`
-	Status    string    `json:"status"`
-	StartsAt  time.Time `json:"startsAt"`
+type AlertmanagerPayload struct {
+	Status   string      `json:"status"`
+	Receiver string      `json:"receiver"`
+	Alerts   []AlertItem `json:"alerts"`
+}
+
+type AlertItem struct {
+	Status      string            `json:"status"`
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
+	StartsAt    time.Time         `json:"startsAt"`
+	EndsAt      time.Time         `json:"endsAt"`
 }

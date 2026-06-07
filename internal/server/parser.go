@@ -1,13 +1,11 @@
 package server
 
-import (
-	"encoding/json"
-)
+import "encoding/json"
 
-func ParseAlert(data []byte) (Alert, error) {
-	var alert Alert
-	if err := json.Unmarshal(data, &alert); err != nil {
-		return Alert{}, err
+func ParseAlert(data []byte) (AlertmanagerPayload, error) {
+	var payload AlertmanagerPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return AlertmanagerPayload{}, err
 	}
-	return alert, nil
+	return payload, nil
 }

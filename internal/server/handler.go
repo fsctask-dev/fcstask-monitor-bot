@@ -15,8 +15,7 @@ func HandleWebhook(bot *bot.Bot) fiber.Handler {
 
 func HandleAlert(bot *bot.Bot) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		alert, err := ParseAlert(c.Body())
+		payload, err := ParseAlert(c.Body())
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
@@ -27,8 +26,10 @@ func HandleAlert(bot *bot.Bot) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		alertText := FormatAlertText(alert)
-		SendAlertToUsers(bot, users, alertText)
+		for _, alert := range payload.Alerts {
+			alertText := FormatAlertText(alert)
+			SendAlertToUsers(bot, users, alertText)
+		}
 
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Alert sent"})
 	}

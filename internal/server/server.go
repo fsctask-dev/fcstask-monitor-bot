@@ -14,7 +14,7 @@ func NewServer(ctx context.Context, bot *bot.Bot) *Server {
 	app := fiber.New()
 
 	app.Post("/webhook", HandleWebhook(bot))
-	app.Post("/alert", HandleAlert(bot))
+	app.Post("/webhook/alerts", HandleAlert(bot))
 
 	return &Server{
 		app: app,
