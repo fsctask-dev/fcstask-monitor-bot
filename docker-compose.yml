@@ -10,14 +10,22 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fcstask -d fcstask-monitor-bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${DOCKERHUB_IMAGE:-fcstask-monitor-bot:latest}
     container_name: fcstask-app
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     ports:

@@ -25,9 +25,6 @@ func NewConfig() (*Config, error) {
 	}
 
 	publicURL := os.Getenv("PUBLIC_URL")
-	if publicURL == "" {
-		return nil, errors.New("PUBLIC_URL environment variable is not set")
-	}
 
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" {
