@@ -44,10 +44,13 @@ jobs:
 
       - name: Pull and restart
         uses: appleboy/ssh-action@v1
+        env:
+          DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/fcstask-monitor-bot:latest
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
+          envs: DOCKERHUB_IMAGE
           script: |
             cd /opt/fcstask-monitor-bot
             docker compose pull app

@@ -8,9 +8,7 @@ import (
 )
 
 func NewConfig() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, err
-	}
+	godotenv.Load() //nolint:errcheck
 
 	botToken := os.Getenv("BOT_TOKEN")
 	if botToken == "" {
