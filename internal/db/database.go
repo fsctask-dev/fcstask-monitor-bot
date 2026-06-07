@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"fcstask-monitor-bot/internal/logger"
 	model "fcstask-monitor-bot/internal/model"
@@ -21,9 +22,20 @@ func InitDB() {
 		os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
 
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	for i := range 10 {
+		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			sqlDB, _ := DB.DB()
+			err = sqlDB.Ping()
+		}
+		if err == nil {
+			break
+		}
+		logger.Log.Warn().Err(err).Int("attempt", i+1).Msg("waiting for database...")
+		time.Sleep(3 * time.Second)
+	}
 	if err != nil {
-		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
+		logger.Log.Fatal().Err(err).Msg("failed to connect to database after retries")
 	}
 
 	err = DB.AutoMigrate(&model.User{})
