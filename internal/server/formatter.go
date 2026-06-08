@@ -1,11 +1,20 @@
 package server
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-func FormatAlertText(alert Alert) string {
-	statusIcon := "🔴"
-	if alert.Status == "resolved" {
-		statusIcon = "🟢"
+func FormatAlertText(payload AlertmanagerPayload) string {
+	var sb strings.Builder
+	for _, alert := range payload.Alerts {
+		statusIcon := "🔴"
+		if alert.Status == "resolved" {
+			statusIcon = "🟢"
+		}
+		alertName := alert.Labels["alertname"]
+		summary := alert.Annotations["summary"]
+		sb.WriteString(fmt.Sprintf("🚨 ALERT\n\n%s %s: %s", statusIcon, alertName, summary))
 	}
-	return fmt.Sprintf("🚨 ALERT\n\n%s %s: %s", statusIcon, alert.AlertName, alert.Summary)
+	return sb.String()
 }
