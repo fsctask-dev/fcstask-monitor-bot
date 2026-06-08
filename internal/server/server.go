@@ -8,10 +8,13 @@ import (
 	"fcstask-monitor-bot/internal/logger"
 
 	"github.com/gofiber/fiber/v2"
+	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 func NewServer(ctx context.Context, bot *bot.Bot) *Server {
 	app := fiber.New()
+
+	app.Use(fiberlogger.New())
 
 	app.Post("/webhook", HandleWebhook(bot))
 	app.Post("/webhook/alerts", HandleAlert(bot))
