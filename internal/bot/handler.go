@@ -1,124 +1,95 @@
 package bot
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"time"
 
 	"fcstask-monitor-bot/internal/db"
+	"fcstask-monitor-bot/internal/grafana"
 	"fcstask-monitor-bot/internal/logger"
 	model "fcstask-monitor-bot/internal/model"
 
 	gotgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"gorm.io/gorm"
 )
 
 func Start(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
 	if update.Message == nil {
-		logger.Log.Debug().Int64("update_id", update.ID).Msg("update message is nil")
 		return
 	}
 
 	chatID := update.Message.Chat.ID
-	text := update.Message.Text
-
-	logger.Log.Info().Int64("chat_id", chatID).Str("text", text).Msg("start command received")
+	logger.Log.Info().Int64("chat_id", chatID).Msg("start command received")
 
 	user := model.User{
 		ChatID:    chatID,
 		CreatedAt: time.Now(),
 	}
-
-	res := database.DB.Where("chat_id = ?", chatID).FirstOrCreate(&user)
-	switch {
-	case res.Error != nil:
-		logger.Log.Error().Err(res.Error).Int64("chat_id", chatID).Msg("failed to create user")
-	case res.RowsAffected == 0:
-		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID: chatID,
-			Text:   "⏹️ Вы уже подписаны на алёрты",
-		})
-		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent already subscribed message")
-	default:
-		logger.Log.Info().Int64("chat_id", chatID).Msg("new subscription created")
-		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID:      chatID,
-			Text:        "✅Вы подписались на алёрты",
-			ReplyMarkup: BuildReplyKeyboard(),
-		})
-		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent subscription confirmation")
-	}
-}
-
-func Stop(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
-	if update.Message == nil {
+	if err := database.DB.Where("chat_id = ?", chatID).FirstOrCreate(&user).Error; err != nil {
+		logger.Log.Error().Err(err).Int64("chat_id", chatID).Msg("failed to save user")
 		return
 	}
 
-	chatID := update.Message.Chat.ID
-	logger.Log.Info().Int64("chat_id", chatID).Msg("stop command received")
-
-	res := database.DB.Delete(&model.User{}, "chat_id = ?", chatID)
-	switch {
-	case res.Error != nil:
-		logger.Log.Error().Err(res.Error).Int64("chat_id", chatID).Msg("failed to delete user")
-	case res.RowsAffected == 0:
-		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID: chatID,
-			Text:   "⏹️ Вы не были подписаны на алёрты",
-		})
-		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent not subscribed message")
-	default:
-		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID:      chatID,
-			Text:        "❌ Вы отписались от алёртов",
-			ReplyMarkup: BuildReplyKeyboard(),
-		})
-		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent unsubscription confirmation")
-	}
-}
-
-func Status(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
-	if update.Message == nil {
-		return
-	}
-
-	chatID := update.Message.Chat.ID
-	logger.Log.Info().Int64("chat_id", chatID).Msg("status command received")
-
-	res := database.DB.First(&model.User{}, "chat_id = ?", chatID)
-	switch {
-	case res.Error == gorm.ErrRecordNotFound:
-		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID:      chatID,
-			Text:        "❌ Вы не подписаны на алёрты",
-			ReplyMarkup: BuildReplyKeyboard(),
-		})
-		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent not subscribed status")
-	case res.Error != nil:
-		logger.Log.Error().Err(res.Error).Int64("chat_id", chatID).Msg("failed to get user status")
-	default:
-		_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
-			ChatID:      chatID,
-			Text:        "✅ Вы подписаны на алёрты",
-			ReplyMarkup: BuildReplyKeyboard(),
-		})
-		logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent subscribed status")
-	}
-}
-
-func Help(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
-	if update.Message == nil {
-		return
-	}
-
-	chatID := update.Message.Chat.ID
-	logger.Log.Info().Int64("chat_id", chatID).Msg("help command received")
-
-	_, err := bot.SendMessage(ctx, &gotgbot.SendMessageParams{
+	bot.SendMessage(ctx, &gotgbot.SendMessageParams{ //nolint:errcheck
 		ChatID:      chatID,
-		Text:      "/start  — ✅ Подписаться на алёрты\n/stop   — ❌ Отписаться от алёртов\n/status — ❔ Проверить статус\n/help   — 📋 Список команд",
-		ReplyMarkup: BuildReplyKeyboard(),
+		Text:        "✅ Вы будете получать уведомления об алертах системы.",
+		ReplyMarkup: mainKeyboard(),
 	})
-	logger.Log.Debug().Err(err).Int64("chat_id", chatID).Msg("sent help message")
+}
+
+func StatusHandler(gc *grafana.Client) gotgbot.HandlerFunc {
+	return func(ctx context.Context, bot *gotgbot.Bot, update *models.Update) {
+		if update.Message == nil {
+			return
+		}
+		chatID := update.Message.Chat.ID
+
+		if gc == nil {
+			bot.SendMessage(ctx, &gotgbot.SendMessageParams{ 
+				ChatID: chatID,
+				Text:   "⚠️ Grafana не настроена (GRAFANA_URL / GRAFANA_TOKEN не заданы).",
+			})
+			return
+		}
+
+		bot.SendMessage(ctx, &gotgbot.SendMessageParams{ 
+			ChatID:      chatID,
+			Text:        "Выберите дашборд:",
+			ReplyMarkup: dashboardInlineKeyboard(),
+		})
+	}
+}
+
+func DashboardCallback(gc *grafana.Client) gotgbot.HandlerFunc {
+	return func(ctx context.Context, b *gotgbot.Bot, update *models.Update) {
+		query := update.CallbackQuery
+		if query == nil {
+			return
+		}
+
+		b.AnswerCallbackQuery(ctx, &gotgbot.AnswerCallbackQueryParams{
+			CallbackQueryID: query.ID,
+			Text:            "Загрузка...",
+		})
+
+		uid := strings.TrimPrefix(query.Data, "dashboard:")
+		chatID := query.From.ID
+
+		imgData, err := gc.RenderDashboard(ctx, uid)
+		if err != nil {
+			logger.Log.Error().Err(err).Str("uid", uid).Msg("failed to render dashboard")
+			b.SendMessage(ctx, &gotgbot.SendMessageParams{
+				ChatID: chatID,
+				Text:   "❌ Не удалось получить скриншот дашборда.",
+			})
+			return
+		}
+
+		b.SendPhoto(ctx, &gotgbot.SendPhotoParams{
+			ChatID: chatID,
+			Photo:  &models.InputFileUpload{Filename: "screenshot.png", Data: bytes.NewReader(imgData)},
+		})
+	}
 }

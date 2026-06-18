@@ -27,7 +27,9 @@ func main() {
 
 	logger.Log.Info().Str("level", cfg.LogLevel).Msg("logger initialized")
 
-	database.InitDB()
+	if err := database.InitDB(); err != nil {
+		logger.Log.Fatal().Err(err).Msg("failed to initialize database")
+	}
 
 	bot, err := tgbot.NewBot(ctx, cfg)
 	if err != nil {

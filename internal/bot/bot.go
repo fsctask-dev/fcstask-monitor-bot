@@ -2,23 +2,28 @@ package bot
 
 import (
 	"context"
-	config "fcstask-monitor-bot/internal/config"
 	"net/http"
+
+	config "fcstask-monitor-bot/internal/config"
+	"fcstask-monitor-bot/internal/grafana"
 
 	gotgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 )
 
 func NewBot(ctx context.Context, cfg *config.Config) (*Bot, error) {
+	var gc *grafana.Client
+	if cfg.GrafanaURL != "" && cfg.GrafanaToken != "" {
+		gc = grafana.NewClient(cfg.GrafanaURL, cfg.GrafanaToken)
+	}
+
+	statusHandler := StatusHandler(gc)
+
 	opts := []gotgbot.Option{
 		gotgbot.WithMessageTextHandler("/start", gotgbot.MatchTypeExact, Start),
-		gotgbot.WithMessageTextHandler("/stop", gotgbot.MatchTypeExact, Stop),
-		gotgbot.WithMessageTextHandler("/status", gotgbot.MatchTypeExact, Status),
-		gotgbot.WithMessageTextHandler("/help", gotgbot.MatchTypeExact, Help),
-		gotgbot.WithMessageTextHandler("✅ Подписаться", gotgbot.MatchTypeExact, Start),
-		gotgbot.WithMessageTextHandler("❌ Отписаться", gotgbot.MatchTypeExact, Stop),
-		gotgbot.WithMessageTextHandler("❔ Статус", gotgbot.MatchTypeExact, Status),
-		gotgbot.WithMessageTextHandler("📋 Помощь", gotgbot.MatchTypeExact, Help),
+		gotgbot.WithMessageTextHandler("/status", gotgbot.MatchTypeExact, statusHandler),
+		gotgbot.WithMessageTextHandler("📊 Статус", gotgbot.MatchTypeExact, statusHandler),
+		gotgbot.WithCallbackQueryDataHandler("dashboard:", gotgbot.MatchTypePrefix, DashboardCallback(gc)),
 	}
 
 	bot, err := gotgbot.New(cfg.BotToken, opts...)
@@ -30,9 +35,7 @@ func NewBot(ctx context.Context, cfg *config.Config) (*Bot, error) {
 		return nil, err
 	}
 
-	return &Bot{
-		TgBot: bot,
-	}, nil
+	return &Bot{TgBot: bot}, nil
 }
 
 func (bot *Bot) StartPolling(ctx context.Context) {
@@ -54,10 +57,8 @@ func (bot *Bot) WebhookHandler() http.Handler {
 func RegisterMyCommands(ctx context.Context, bot *gotgbot.Bot) error {
 	_, err := bot.SetMyCommands(ctx, &gotgbot.SetMyCommandsParams{
 		Commands: []models.BotCommand{
-			{Command: "start", Description: "✅ Подписаться"},
-			{Command: "stop", Description: "❌ Отписаться"},
-			{Command: "status", Description: "❔ Статус"},
-			{Command: "help", Description: "📋 Помощь"},
+			{Command: "start", Description: "Начать получать уведомления"},
+			{Command: "status", Description: "Скриншоты дашбордов Grafana"},
 		},
 	})
 	return err

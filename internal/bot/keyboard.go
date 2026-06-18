@@ -1,32 +1,32 @@
 package bot
 
-import "github.com/go-telegram/bot/models"
+import (
+	"fcstask-monitor-bot/internal/grafana"
 
-func BuildReplyKeyboard() models.ReplyKeyboardMarkup {
-	subBtn := models.KeyboardButton{
-		Text: "✅ Подписаться",
-	}
-	unsubBtn := models.KeyboardButton{
-		Text: "❌ Отписаться",
-	}
-	statusBtn := models.KeyboardButton{
-		Text: "❔ Статус",
-	}
-	helpBtn := models.KeyboardButton{
-		Text: "📋 Помощь",
-	}
-	keyboard := [][]models.KeyboardButton{
-		{subBtn, unsubBtn},
-		{statusBtn, helpBtn},
-	}
+	"github.com/go-telegram/bot/models"
+)
 
-	MainReplyKeyboard := models.ReplyKeyboardMarkup{
-		Keyboard:        keyboard,
-		IsPersistent:    true,
-		ResizeKeyboard:  true,
-		OneTimeKeyboard: false,
-		Selective:       false,
+func mainKeyboard() *models.ReplyKeyboardMarkup {
+	return &models.ReplyKeyboardMarkup{
+		Keyboard: [][]models.KeyboardButton{
+			{{Text: "📊 Статус"}},
+		},
+		ResizeKeyboard: true,
 	}
+}
 
-	return MainReplyKeyboard
+func dashboardInlineKeyboard() *models.InlineKeyboardMarkup {
+	var row []models.InlineKeyboardButton
+	var rows [][]models.InlineKeyboardButton
+	for i, d := range grafana.Dashboards {
+		row = append(row, models.InlineKeyboardButton{
+			Text:         d.Name,
+			CallbackData: "dashboard:" + d.UID,
+		})
+		if len(row) == 2 || i == len(grafana.Dashboards)-1 {
+			rows = append(rows, row)
+			row = nil
+		}
+	}
+	return &models.InlineKeyboardMarkup{InlineKeyboard: rows}
 }

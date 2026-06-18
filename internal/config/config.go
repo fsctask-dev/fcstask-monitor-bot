@@ -34,12 +34,14 @@ func NewConfig() (*Config, error) {
 	logConsole := os.Getenv("LOG_CONSOLE") == "true"
 
 	return &Config{
-		BotToken:   botToken,
-		BotWebhook: botWebhook,
-		ServerPort: serverPort,
-		PublicURL:  publicURL,
-		LogLevel:   logLevel,
-		LogFile:    logFile,
-		LogConsole: logConsole,
+		BotToken:     botToken,
+		BotWebhook:   botWebhook,
+		ServerPort:   serverPort,
+		PublicURL:    publicURL,
+		LogLevel:     logLevel,
+		LogFile:      logFile,
+		LogConsole:   logConsole,
+		GrafanaURL:   os.Getenv("GRAFANA_URL"),
+		GrafanaToken: os.Getenv("GRAFANA_TOKEN"),
 	}, nil
 }
