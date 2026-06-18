@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+
 	"fcstask-monitor-bot/internal/bot"
 	db "fcstask-monitor-bot/internal/db"
 	"fcstask-monitor-bot/internal/logger"
@@ -13,9 +15,8 @@ func HandleWebhook(bot *bot.Bot) fiber.Handler {
 	return adaptor.HTTPHandler(bot.WebhookHandler())
 }
 
-func HandleAlert(bot *bot.Bot) fiber.Handler {
+func HandleAlert(ctx context.Context, bot *bot.Bot) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
 		alert, err := ParseAlert(c.Body())
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -28,7 +29,7 @@ func HandleAlert(bot *bot.Bot) fiber.Handler {
 		}
 
 		alertText := FormatAlertText(alert)
-		SendAlertToUsers(bot, users, alertText)
+		SendAlertToUsers(ctx, bot, users, alertText)
 
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Alert sent"})
 	}

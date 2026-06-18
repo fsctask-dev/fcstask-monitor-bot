@@ -17,7 +17,7 @@ func NewServer(ctx context.Context, bot *bot.Bot) *Server {
 	app.Use(fiberlogger.New())
 
 	app.Post("/webhook", HandleWebhook(bot))
-	app.Post("/webhook/alerts", HandleAlert(bot))
+	app.Post("/webhook/alerts", HandleAlert(ctx, bot))
 
 	return &Server{
 		app: app,
